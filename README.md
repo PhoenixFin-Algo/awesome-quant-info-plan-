@@ -4,6 +4,66 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 
 [![](https://awesome.re/badge.svg)](https://awesome.re)
 
+## Draft Plan for Review: PhoenixFin Algo (No-Leakage Forward Testing)
+
+### 1) Critical Review & Hard Requirements
+- **Primary risk identified:** data leakage from feature engineering, scaling, label construction, and parameter tuning.
+- **Hard rule:** the final 20% forward test window is untouched until all training and model selection is complete.
+- **Gate to proceed:** if any leakage safeguard fails, results are invalid and must be rerun.
+
+### 2) Data Split & Validation Design (80/20 Forward Testing)
+- Sort data strictly by event timestamp (earliest -> latest).
+- Use one contiguous split:
+  - **Train/validation block:** first 80% of timeline.
+  - **Forward test block:** last 20% of timeline.
+- Tune models **only** inside the 80% block using time-aware CV:
+  - rolling/expanding windows only
+  - optional purged + embargoed folds when labels overlap in time
+- Freeze model, hyperparameters, and thresholds before touching the 20% block.
+- Run a single final evaluation on the 20% block and report it as out-of-sample.
+
+### 3) Anti-Leakage Checklist (Must Pass)
+- Define and enforce an `as_of_time` for every feature.
+- Use point-in-time joins only (no future revisions).
+- Fit scalers/encoders/imputers on train folds only; transform validation/test afterward.
+- Build labels using only future returns relative to prediction timestamp, then drop overlapping rows appropriately.
+- Remove direct or proxy future-information columns.
+- Ensure no duplicated records crossing split boundaries.
+- Lock random seeds and code version for reproducibility.
+
+### 4) Optimization Suggestions (Quality-Preserving)
+- **Data pipeline optimization:** cache immutable intermediate features keyed by date range + config hash.
+- **Search optimization:** use Bayesian optimization or successive halving within the 80% block.
+- **Compute optimization:** parallelize independent fold/model jobs; keep deterministic seeds.
+- **Feature optimization:** prune unstable features via train-fold importance stability, not forward-test performance.
+- **Decision-threshold optimization:** calibrate only on training folds, then freeze for forward test.
+- **Monitoring optimization:** add automated drift and leakage checks as CI gates.
+
+### 5) Epics & Issues Draft (Create Project Board Only After Review)
+- **Epic 1: Data Integrity & Leakage Prevention**
+  - Issue: Define dataset schema with `timestamp` and `as_of_time` requirements.
+  - Issue: Implement point-in-time feature assembly and leakage unit checks.
+  - Issue: Add train-only fit/transform pipeline enforcement.
+- **Epic 2: 80/20 Forward-Testing Framework**
+  - Issue: Implement contiguous chronological 80/20 splitter.
+  - Issue: Add rolling/expanding CV on the 80% block.
+  - Issue: Add optional purged/embargoed split mode for overlapping labels.
+- **Epic 3: Model Selection & Optimization**
+  - Issue: Implement reproducible hyperparameter optimization constrained to train block.
+  - Issue: Add feature stability screening across CV folds.
+  - Issue: Freeze model artifact + decision thresholds before forward test.
+- **Epic 4: Reporting & Governance**
+  - Issue: Create standardized metrics report (train CV vs forward-test clearly separated).
+  - Issue: Add run manifest (data snapshot, code SHA, config hash, seeds).
+  - Issue: Add go/no-go checklist requiring all anti-leakage checks to pass.
+
+### 6) Open Questions Before Execution (No Assumptions)
+- What is the exact prediction horizon (e.g., next bar, next day, multi-day)?
+- Do labels overlap in time (determines mandatory purge/embargo settings)?
+- Is retraining allowed during the 20% forward window (walk-forward deployment simulation) or strictly one-shot?
+- Which objective is primary for optimization (Sharpe, Calmar, precision@k, net PnL after costs)?
+- What transaction cost and slippage model must be used?
+
 ## Languages
 
 - [Python](#python)
