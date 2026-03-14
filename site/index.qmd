@@ -26,9 +26,11 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 - Use one contiguous split:
   - **Train/validation block:** first 80% of timeline.
   - **Forward test block:** last 20% of timeline.
+- Make prediction horizon fully configurable (`h`): next bar/day/multi-period, strategy-specific.
 - Tune models **only** inside the 80% block using time-aware CV:
   - rolling/expanding windows only
-  - optional purged + embargoed folds when labels overlap in time
+  - **purged + embargoed folds enabled by default** when labels overlap (expected case)
+- Retraining policy for forward test: **one-shot only** (no retraining inside the 20% window).
 - Freeze model, hyperparameters, and thresholds before touching the 20% block.
 - Run a single final evaluation on the 20% block and report it as out-of-sample.
 
@@ -36,7 +38,7 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 - Define and enforce an `as_of_time` for every feature.
 - Use point-in-time joins only (no future revisions).
 - Fit scalers/encoders/imputers on train folds only; transform validation/test afterward.
-- Build labels using only future returns relative to prediction timestamp, then drop overlapping rows appropriately.
+- Build labels with horizon `h` using only future returns relative to prediction timestamp, then purge/embargo overlapping samples.
 - Remove direct or proxy future-information columns.
 - Ensure no duplicated records crossing split boundaries.
 - Lock random seeds and code version for reproducibility.
@@ -47,6 +49,16 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 - **Compute optimization:** parallelize independent fold/model jobs; keep deterministic seeds.
 - **Feature optimization:** prune unstable features via train-fold importance stability, not forward-test performance.
 - **Decision-threshold optimization:** calibrate only on training folds, then freeze for forward test.
+- **Objective optimization (strategy-aware, top-2):**
+  - default pair: **Sharpe + Calmar** for risk-adjusted strategy ranking
+  - fallback when return distributions are unstable: **Net PnL after costs + Max Drawdown**
+- **Cost/slippage optimization (IBKR baseline, mid to mid-high):**
+  - enforce fee/slippage profiles as configs (`low`, `baseline`, `stressed`)
+  - baseline assumption starts at conservative mid-to-mid-high costs and must be validated against current IBKR schedule before production runs
+- **Monte Carlo robustness test (conditional):**
+  - run only if data sufficiency gate passes (minimum trade count + regime coverage)
+  - suggested gate: at least 250 closed trades and at least 2 distinct volatility regimes
+  - use bootstrapped trade-sequence / return-path simulations to estimate drawdown and risk-of-ruin stability
 - **Monitoring optimization:** add automated drift and leakage checks as CI gates.
 
 ### 5) Epics & Issues Draft (Create Project Board Only After Review)
@@ -56,23 +68,22 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
   - Issue: Add train-only fit/transform pipeline enforcement.
 - **Epic 2: 80/20 Forward-Testing Framework**
   - Issue: Implement contiguous chronological 80/20 splitter.
-  - Issue: Add rolling/expanding CV on the 80% block.
-  - Issue: Add optional purged/embargoed split mode for overlapping labels.
+  - Issue: Add rolling/expanding CV on the 80% block with configurable horizon `h`.
+  - Issue: Add default-on purged/embargoed split mode with overlap auto-detection.
+  - Issue: Enforce one-shot forward-test execution lock (no retraining).
 - **Epic 3: Model Selection & Optimization**
   - Issue: Implement reproducible hyperparameter optimization constrained to train block.
   - Issue: Add feature stability screening across CV folds.
+  - Issue: Add strategy-aware objective pair selection (Sharpe+Calmar default, PnL+MDD fallback).
   - Issue: Freeze model artifact + decision thresholds before forward test.
-- **Epic 4: Reporting & Governance**
+  - Issue: Add IBKR-oriented transaction cost and slippage config pack (low/baseline/stressed).
+- **Epic 4: Robustness & Stress Testing**
+  - Issue: Add Monte Carlo sufficiency gate (trade count + regime coverage).
+  - Issue: Implement Monte Carlo path/trade resampling module and confidence-band reporting.
+- **Epic 5: Reporting & Governance**
   - Issue: Create standardized metrics report (train CV vs forward-test clearly separated).
   - Issue: Add run manifest (data snapshot, code SHA, config hash, seeds).
-  - Issue: Add go/no-go checklist requiring all anti-leakage checks to pass.
-
-### 6) Open Questions Before Execution (No Assumptions)
-- What is the exact prediction horizon (e.g., next bar, next day, multi-day)?
-- Do labels overlap in time (determines mandatory purge/embargo settings)?
-- Is retraining allowed during the 20% forward window (walk-forward deployment simulation) or strictly one-shot?
-- Which objective is primary for optimization (Sharpe, Calmar, precision@k, net PnL after costs)?
-- What transaction cost and slippage model must be used?
+  - Issue: Add go/no-go checklist requiring all anti-leakage checks and Monte Carlo gate logic to pass.
 
 ## Python
 
