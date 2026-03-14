@@ -4,6 +4,92 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 
 [![](https://awesome.re/badge.svg)](https://awesome.re)
 
+## Draft Plan for Review: PhoenixFin Algo (No-Leakage Forward Testing)
+
+### 1) Critical Review & Hard Requirements
+- **Primary risk identified:** data leakage from feature engineering, scaling, label construction, and parameter tuning.
+- **Hard rule:** the final 20% forward test window is untouched until all training and model selection is complete.
+- **Gate to proceed:** if any leakage safeguard fails, results are invalid and must be rerun.
+
+### 2) Data Split & Validation Design (80/20 Forward Testing)
+- Sort data strictly by event timestamp (earliest -> latest).
+- Use one contiguous split:
+  - **Train/validation block:** first 80% of timeline.
+  - **Forward test block:** last 20% of timeline.
+- Make prediction horizon fully configurable (`h`): next bar/day/multi-period, strategy-specific.
+- Tune models **only** inside the 80% block using time-aware CV:
+  - rolling/expanding windows only
+  - **purged + embargoed folds enabled by default** when labels overlap (expected case)
+- Retraining policy for forward test: **one-shot only** (no retraining inside the 20% window).
+- Freeze model, hyperparameters, and thresholds before touching the 20% block.
+- Run a single final evaluation on the 20% block and report it as out-of-sample.
+
+### 3) Anti-Leakage Checklist (Must Pass)
+- Define and enforce an `as_of_time` for every feature.
+- Use point-in-time joins only (no future revisions).
+- Fit scalers/encoders/imputers on train folds only; transform validation/test afterward.
+- Build labels with horizon `h` using only future returns relative to prediction timestamp, then purge/embargo overlapping samples.
+- Remove direct or proxy future-information columns.
+- Ensure no duplicated records crossing split boundaries.
+- Lock random seeds and code version for reproducibility.
+
+### 4) Optimization Suggestions (Quality-Preserving)
+- **Data pipeline optimization:** cache immutable intermediate features keyed by date range + config hash.
+- **Search optimization:** use Bayesian optimization or successive halving within the 80% block.
+- **Compute optimization:** parallelize independent fold/model jobs; keep deterministic seeds.
+- **Feature optimization:** prune unstable features via train-fold importance stability, not forward-test performance.
+- **Decision-threshold optimization:** calibrate only on training folds, then freeze for forward test.
+- **Objective optimization (strategy-aware, top-2):**
+  - default pair: **Sharpe + Calmar** for risk-adjusted strategy ranking
+  - fallback when return distributions are unstable: **Net PnL after costs + Max Drawdown**
+- **Cost/slippage optimization (IBKR baseline, mid to mid-high):**
+  - enforce fee/slippage profiles as configs (`low`, `baseline`, `stressed`)
+  - baseline assumption starts at conservative mid-to-mid-high costs and must be validated against current IBKR schedule before production runs
+- **Monte Carlo robustness test (conditional):**
+  - run only if data sufficiency gate passes (minimum trade count + regime coverage)
+  - suggested gate: at least 250 closed trades and at least 2 distinct volatility regimes
+  - use bootstrapped trade-sequence / return-path simulations to estimate drawdown and risk-of-ruin stability
+- **Monitoring optimization:** add automated drift and leakage checks as CI gates.
+
+### 5) Backtrader Baseline + Parameter-Cluster Backtest
+- Implement a baseline Backtrader run first using frozen strategy logic and frozen cost/slippage baseline assumptions.
+- Keep parameter exploration inside the train/validation 80% block; never use the forward 20% block for parameter selection.
+- Define logical parameter ranges per strategy family and enforce constraints between parameters (for example, `fast_window < slow_window`).
+- Run parameter combinations across those ranges, then rank each run by the strategy objective pair.
+- Require **clustered robustness** rather than isolated peaks:
+  - prefer contiguous high-performing regions in parameter space
+  - reject isolated single-point optima as likely overfit
+- Publish a cluster-spotting diagram for each strategy:
+  - 2D heatmap/contour of primary objective over parameter grid
+  - overlay top-decile region and selected baseline point
+- Promote only parameter sets that remain stable across CV folds and across `baseline`/`stressed` cost scenarios.
+
+### 6) Epics & Issues Draft (Create Project Board Only After Review)
+- **Epic 1: Data Integrity & Leakage Prevention**
+  - Issue: Define dataset schema with `timestamp` and `as_of_time` requirements.
+  - Issue: Implement point-in-time feature assembly and leakage unit checks.
+  - Issue: Add train-only fit/transform pipeline enforcement.
+- **Epic 2: 80/20 Forward-Testing Framework**
+  - Issue: Implement contiguous chronological 80/20 splitter.
+  - Issue: Add rolling/expanding CV on the 80% block with configurable horizon `h`.
+  - Issue: Add default-on purged/embargoed split mode with overlap auto-detection.
+  - Issue: Enforce one-shot forward-test execution lock (no retraining).
+- **Epic 3: Model Selection & Optimization**
+  - Issue: Implement reproducible hyperparameter optimization constrained to train block.
+  - Issue: Add feature stability screening across CV folds.
+  - Issue: Add strategy-aware objective pair selection (Sharpe+Calmar default, PnL+MDD fallback).
+  - Issue: Freeze model artifact + decision thresholds before forward test.
+  - Issue: Add IBKR-oriented transaction cost and slippage config pack (low/baseline/stressed).
+- **Epic 4: Robustness & Stress Testing**
+  - Issue: Add Monte Carlo sufficiency gate (trade count + regime coverage).
+  - Issue: Implement Monte Carlo path/trade resampling module and confidence-band reporting.
+  - Issue: Implement Backtrader baseline run and parameter-combination sweep module.
+  - Issue: Add parameter-cluster diagram artifacts (heatmap/contour with selected-region overlay).
+- **Epic 5: Reporting & Governance**
+  - Issue: Create standardized metrics report (train CV vs forward-test clearly separated).
+  - Issue: Add run manifest (data snapshot, code SHA, config hash, seeds).
+  - Issue: Add go/no-go checklist requiring all anti-leakage checks and Monte Carlo gate logic to pass.
+
 ## Languages
 
 - [Python](#python)
