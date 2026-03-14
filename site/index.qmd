@@ -61,7 +61,20 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
   - use bootstrapped trade-sequence / return-path simulations to estimate drawdown and risk-of-ruin stability
 - **Monitoring optimization:** add automated drift and leakage checks as CI gates.
 
-### 5) Epics & Issues Draft (Create Project Board Only After Review)
+### 5) Backtrader Baseline + Parameter-Cluster Backtest
+- Implement a baseline Backtrader run first using frozen strategy logic and frozen cost/slippage baseline assumptions.
+- Keep parameter exploration inside the train/validation 80% block; never use the forward 20% block for parameter selection.
+- Define logical parameter ranges per strategy family and enforce constraints between parameters (for example, `fast_window < slow_window`).
+- Run parameter combinations across those ranges, then rank each run by the strategy objective pair.
+- Require **clustered robustness** rather than isolated peaks:
+  - prefer contiguous high-performing regions in parameter space
+  - reject isolated single-point optima as likely overfit
+- Publish a cluster-spotting diagram for each strategy:
+  - 2D heatmap/contour of primary objective over parameter grid
+  - overlay top-decile region and selected baseline point
+- Promote only parameter sets that remain stable across CV folds and across `baseline`/`stressed` cost scenarios.
+
+### 6) Epics & Issues Draft (Create Project Board Only After Review)
 - **Epic 1: Data Integrity & Leakage Prevention**
   - Issue: Define dataset schema with `timestamp` and `as_of_time` requirements.
   - Issue: Implement point-in-time feature assembly and leakage unit checks.
@@ -80,6 +93,8 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 - **Epic 4: Robustness & Stress Testing**
   - Issue: Add Monte Carlo sufficiency gate (trade count + regime coverage).
   - Issue: Implement Monte Carlo path/trade resampling module and confidence-band reporting.
+  - Issue: Implement Backtrader baseline run and parameter-combination sweep module.
+  - Issue: Add parameter-cluster diagram artifacts (heatmap/contour with selected-region overlay).
 - **Epic 5: Reporting & Governance**
   - Issue: Create standardized metrics report (train CV vs forward-test clearly separated).
   - Issue: Add run manifest (data snapshot, code SHA, config hash, seeds).
