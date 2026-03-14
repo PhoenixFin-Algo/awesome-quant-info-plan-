@@ -194,6 +194,30 @@ A curated list of insanely awesome libraries, packages and resources for Quants 
 - [quantitative-finance-tools](https://github.com/omichauhan-lgtm/quantitative-finance-tools) - Library for portfolio optimization (MVO) and rigorous risk metrics (VaR/CVaR).
 - [curistat](https://github.com/moxiespirit/MyClone/tree/main/volatility_platform) - Futures volatility forecasting platform for ES/NQ. Proprietary CVN rating (1-10), regime detection (CRC composite), 8 directional signals, economic event impact analytics. Includes MCP server for AI agent integration.
 - [Prop Trader Compass](https://otto-ships.github.io/prop-trader-compass/) - Interactive risk and payout calculator for Futures and CFD traders; features one-time fee firm comparisons.
+
+### Standardized Backtest Evaluation Baseline (Draft)
+
+Framework idea based on the backtesting and risk-analysis links above:
+
+1. **Normalize the input**
+   - Use the same bar frequency, timezone, trading calendar, fees, slippage, and position sizing assumptions.
+   - Publish the exact data source and in/out-of-sample split.
+2. **Run all strategies in one reporting schema**
+   - Output one result table per run: `timestamp`, `equity`, `returns`, `position`, `trades`, `costs`.
+3. **Compute four required baseline metrics**
+   - **PnL**: total and annualized profit/loss, net of fees and slippage.
+   - **DD (Max Drawdown)**: maximum peak-to-trough equity decline and recovery duration.
+   - **Sortino Ratio**: risk-adjusted return using downside deviation only.
+   - **Calmar Ratio**: annualized return divided by absolute max drawdown.
+4. **Compare strategies on the same scorecard**
+   - Rank by Calmar and Sortino first, then validate with PnL and DD constraints.
+   - Include confidence checks via walk-forward windows and bootstrap/Monte Carlo resampling.
+5. **Set baseline acceptance gates**
+   - Positive net PnL, max DD below strategy risk budget, Sortino above minimum threshold, Calmar above minimum threshold.
+   - Any strategy failing one gate is marked `not production-ready`.
+6. **Keep the process reproducible**
+   - Version datasets, configuration, and metric code.
+   - Export a single report artifact per run (CSV/JSON + summary table).
   
 ### Factor Analysis
 
