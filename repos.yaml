@@ -1,0 +1,31 @@
+categories:
+  - Market Data
+  - Data Engineering
+  - Alpha Research
+  - Machine Learning
+  - Backtesting
+  - Execution Systems
+  - AI Agents
+  - Infrastructure
+  - Resources
+
+repos:
+  - name: OpenBB
+    url: https://github.com/OpenBB-finance/OpenBB
+    category: Market Data
+
+  - name: AKShare
+    url: https://github.com/akfamily/akshare
+    category: Market Data
+
+  - name: Qlib
+    url: https://github.com/microsoft/qlib
+    category: Machine Learning
+
+  - name: Hummingbot
+    url: https://github.com/hummingbot/hummingbot
+    category: Execution Systems
+
+  - name: vn.py
+    url: https://github.com/vnpy/vnpy
+    category: Execution Systems
